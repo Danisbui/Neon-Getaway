@@ -86,7 +86,33 @@
 
     #mute{position:fixed;right:18px;bottom:18px;pointer-events:auto;background:#080b1dcc;border:1px solid #ffffff2c;color:white;border-radius:12px;padding:10px 12px;box-shadow:none;font-size:18px}#pauseBtn{pointer-events:auto;padding:7px 11px;font-size:14px;box-shadow:none;background:#222b48;color:#fff}
     @media(max-width:600px){#hud{padding:10px}.stats{gap:5px;flex-wrap:wrap}.pill{padding:7px 9px}.controls{gap:12px}.tag{letter-spacing:3px}}
-  </style>
+  
+    html.mobileLandscape #overlay{padding:4px;align-items:center}
+    html.mobileLandscape .card{width:min(760px,78vw);max-height:calc(var(--visible-h,100vh) - 8px);overflow:auto;border-radius:14px;padding:8px 16px}
+    html.mobileLandscape #menu h1{font-size:34px;line-height:.8;letter-spacing:-2px}
+    html.mobileLandscape #gameOver h1{font-size:38px;line-height:.8;letter-spacing:-2px}
+    html.mobileLandscape .tag{margin:2px 0 5px;font-size:9px;letter-spacing:3px}
+    html.mobileLandscape .scoreBig{font-size:26px;margin:2px 0}
+    html.mobileLandscape .best{font-size:10px;margin-bottom:5px}
+    html.mobileLandscape #menu .controls{display:none}
+    html.mobileLandscape #menu .hint{display:none}
+    html.mobileLandscape #menu .saveTools{display:none}
+    html.mobileLandscape #menu .saveNote{display:none}
+    html.mobileLandscape .menuBank{margin:4px auto;font-size:12px}
+    html.mobileLandscape .menuBtns{gap:5px;flex-wrap:nowrap}
+    html.mobileLandscape .menuBtns button{padding:7px 9px;font-size:10px}
+    html.mobileLandscape #garage{width:min(820px,92vw);max-height:calc(var(--visible-h,100vh) - 8px);padding:8px 12px}
+    html.mobileLandscape #achievements{width:min(820px,92vw);max-height:calc(var(--visible-h,100vh) - 8px);padding:8px 12px}
+    html.mobileLandscape .mobilePad{left:6px;bottom:6px;grid-template-columns:40px 40px 40px;grid-template-rows:40px 40px;gap:4px}
+    html.mobileLandscape .mobileActions{right:6px;bottom:6px;gap:4px}
+    html.mobileLandscape .mobileBtn{width:40px;height:40px;font-size:17px;border-radius:10px}
+    html.mobileLandscape #mobAction{width:54px;height:54px;font-size:9px}
+    html.mobileLandscape #mobRocket{width:52px;height:34px;font-size:9px}
+    html.mobileLandscape #mobPause{width:40px;height:32px;font-size:13px}
+    html.mobileLandscape #hud{padding:4px 6px}
+    html.mobileLandscape .pill{font-size:8px;padding:3px 6px}
+    html.mobileLandscape #routeNotice{top:36px;font-size:9px;padding:4px 7px;max-width:42vw}
+</style>
 </head>
 <body>
 <canvas id="game"></canvas>
@@ -353,20 +379,37 @@ function continueRun(){let s;try{s=JSON.parse(localStorage.neonGetawayRun)}catch
 document.querySelector('#pauseBtn').onclick=togglePause;document.querySelector('#resume').onclick=togglePause;document.querySelector('#saveQuit').onclick=saveAndQuit;document.querySelector('#continue').onclick=continueRun;
 function sizeRoad(){
  road.lanes=route.mode==='freeway'?4:3;
- const mobile=(W<=900)||((navigator.maxTouchPoints||0)>0);
- const landscape=W>H;
+ const vv=window.visualViewport;
+ const vw=vv?vv.width:innerWidth, vh=vv?vv.height:innerHeight;
+ const mobile=(vw<=900)||((navigator.maxTouchPoints||0)>0);
+ const landscape=vw>vh;
  if(mobile&&!landscape){
   // Portrait phones: use almost the whole screen so the highway doesn't look tiny.
   road.w=route.mode==='freeway'?Math.min(W*.96,800):Math.min(W*.88,555);
  }else if(mobile&&landscape){
   // Landscape phones: leave side room for touch controls instead of covering the road.
-  road.w=route.mode==='freeway'?Math.min(W*.62,800):Math.min(W*.54,555);
+  road.w=route.mode==='freeway'?Math.min(W*.52,800):Math.min(W*.46,555);
  }else{
   road.w=route.mode==='freeway'?Math.min(W*.82,800):Math.min(W*.60,555);
  }
  road.x=(W-road.w)/2;road.lane=road.w/road.lanes
 }
-function resize(){dpr=Math.min(devicePixelRatio||1,2);const vv=window.visualViewport;W=Math.round(vv?vv.width:innerWidth);H=Math.round(vv?vv.height:innerHeight);canvas.width=W*dpr;canvas.height=H*dpr;canvas.style.width=W+'px';canvas.style.height=H+'px';ctx.setTransform(dpr,0,0,dpr,0,0);sizeRoad();if(!playing){player.x=W/2;player.y=H*.74}}
+function resize(){
+ dpr=Math.min(devicePixelRatio||1,2);
+ const vv=window.visualViewport;
+ const vw=Math.round(vv?vv.width:innerWidth),vh=Math.round(vv?vv.height:innerHeight);
+ const touch=(('ontouchstart' in window)||(navigator.maxTouchPoints||0)>0);
+ const ml=touch&&vw>vh;
+ const worldScale=ml?1.38:1;
+ W=Math.round(vw*worldScale);H=Math.round(vh*worldScale);
+ document.documentElement.style.setProperty('--visible-h',vh+'px');
+ document.documentElement.classList.toggle('mobileLandscape',ml);
+ canvas.width=W*dpr;canvas.height=H*dpr;
+ canvas.style.width=vw+'px';canvas.style.height=vh+'px';
+ ctx.setTransform(dpr,0,0,dpr,0,0);
+ sizeRoad();
+ if(!playing){player.x=W/2;player.y=H*.76}
+}
 addEventListener('resize',resize);if(window.visualViewport)visualViewport.addEventListener('resize',resize);resize();
 
 addEventListener('keydown',e=>{if(e.key==='Escape'&&playing){togglePause();return}if(e.code==='Space'&&playing&&!paused&&!e.repeat)useAbility();if(e.code==='KeyC'&&playing&&!paused&&!e.repeat)fireRocket();keys[e.key.toLowerCase()]=true;if(['arrowup','arrowdown','arrowleft','arrowright',' '].includes(e.key.toLowerCase()))e.preventDefault()});addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
@@ -420,7 +463,12 @@ if(route.event!=='none'&&time>route.until){route.event='none';route.next=time+11
 const lr=(keys.a||keys.arrowleft?-1:0)+(keys.d||keys.arrowright?1:0),ud=(keys.w||keys.arrowup?-1:0)+(keys.s||keys.arrowdown?1:0);const oilSlide=slideTimer>0;player.vx+=(lr*(oilSlide?3400:1050)*tune.turn-player.vx*(oilSlide?.35:5))*dt;if(oilSlide)player.vx+=(Math.sin(time*17)*520+Math.sin(time*8.5)*260)*dt;player.vy+=(ud*700*tune.turn-player.vy*(oilSlide?.8:5))*dt;player.x+=player.vx*dt;player.y+=player.vy*dt;
 let minX=road.x+28,maxX=road.x+road.w-28;if(route.event==='exit'||route.event==='junction')maxX=road.x+road.w+road.lane*.8;if(route.event==='entrance'||route.event==='junction')minX=road.x-road.lane*.8;
 player.x=Math.max(minX,Math.min(maxX,player.x));if((route.event==='exit'||route.event==='junction')&&player.x>road.x+road.w+24){switchRoad(route.mode==='freeway'?'street':'tracks')}else if((route.event==='entrance'||route.event==='junction')&&player.x<road.x-24){switchRoad(route.mode==='tracks'?'street':'freeway')}
-player.y=Math.max(85,Math.min(H-55,player.y));player.angle=player.vx*.0005;
+const minPY=85,maxPY=H-55;player.y=Math.max(minPY,Math.min(maxPY,player.y));
+if(document.documentElement.classList.contains('mobileLandscape')&&!keys.arrowup&&!keys.arrowdown){
+ const targetY=H*.78;
+ player.y+=(targetY-player.y)*Math.min(1,dt*2.2);
+}
+player.angle=player.vx*.0005;
 if(time-(update.spawnT||0) > Math.max(.42,1.0-time*.006)){spawn();update.spawnT=time}
 for(let i=objects.length-1;i>=0;i--){const o=objects[i];if(o.missileCover&&time>=(o.coverUntil||0)){o.missileCover=false;o.covering=false;o.coverLeaving=true}const moveFactor=o.coverLeaving?1.45:((o.missileCover&&time<(o.coverUntil||0))?0:((o.type==='traffic'||o.type==='truck')?.72:1));o.y+=speed*dt*moveFactor-(o.boost||0)*dt;o.boost=Math.max(0,(o.boost||0)-360*dt);if(o.y-o.h/2>H+110&&!(o.missileCover&&time<(o.coverUntil||0))){objects.splice(i,1);continue}if(o.type==='dirt')continue;if(hit(player,o,o.type==='cash'?0:7)){if(o.coverLeaving)continue;if(o.type==='truck'&&o.missileCover&&megaMissile){o.covering=true;continue}if(o.type==='truck'&&o.powerCrate){const fast=Math.random()<.5;if(fast){rocketBoostUntil=time+5;showRoute('GOLD CRATE · 1.5× ROCKET FIRE RATE · 5s')}else{powerShield++;showRoute('GOLD CRATE · SHIELD +1')}burst(o.x,o.y,'#ffd43b',30);tone(920,.18,'sine',.05);objects.splice(i,1);continue}if(o.type==='grass'){if(!o.contact){o.contact=true;impact()}player.x=player.x<o.x?o.x-o.w/2-player.w/2-2:o.x+o.w/2+player.w/2+2;player.vx=0;continue}if(o.daniel){instantCrash();objects.splice(i,1)}else if(o.type==='cash'){const payout=(selected===5?500:100)*(sixStarActive?2:1);money+=payout;record('moneyCollected',payout);localStorage.neonGetawayCash=money;score+=(selected===5?1250:250)*(sixStarActive?2:1);showRoute(`${sixStarActive?'6★ DOUBLE CASH · ':''}+$${payout}`);tone(880,.08,'sine',.04);for(let n=0;n<12;n++)particles.push({x:o.x,y:o.y,vx:(Math.random()-.5)*180,vy:(Math.random()-.5)*180,life:.6,color:'#ffd43b'});objects.splice(i,1)}else if(o.type==='oil'){slideTimer=2.4;record('oilHits');showRoute('OIL SPILL · LOW GRIP!');tone(135,.2,'sawtooth',.04);objects.splice(i,1)}else if(selected===6){tankImpact(o.x,o.y);objects.splice(i,1)}else if(!crash()){burst(o.x,o.y);objects.splice(i,1)}}}
 // Active missile cover truck acts like a solid shield: traffic that reaches it is destroyed.
