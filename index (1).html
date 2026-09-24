@@ -7,8 +7,8 @@
   <title>Neon Getaway</title>
   <style>
     :root{color-scheme:dark;--cyan:#39f6ff;--pink:#ff3b81;--gold:#ffd43b}
-    *{box-sizing:border-box}html,body{height:100%;margin:0;overflow:hidden;background:#050713;font-family:Inter,Segoe UI,Arial,sans-serif;color:#fff}
-    canvas{display:block;width:100%;height:100%;touch-action:none}
+    *{box-sizing:border-box}html,body{height:100%;height:100dvh;margin:0;overflow:hidden;background:#050713;font-family:Inter,Segoe UI,Arial,sans-serif;color:#fff}
+    canvas{display:block;position:fixed;inset:0;width:100vw;height:100dvh;touch-action:none}
     #hud{position:fixed;inset:0;pointer-events:none;padding:clamp(14px,3vw,28px);display:flex;justify-content:space-between;align-items:flex-start;text-shadow:0 2px 8px #000}
     #routeNotice{position:fixed;top:82px;left:50%;transform:translateX(-50%) translateY(-20px);opacity:0;background:#087a4aee;border:2px solid #d9fff0;border-radius:10px;padding:10px 20px;font-weight:1000;letter-spacing:1px;text-align:center;transition:.25s;pointer-events:none;box-shadow:0 5px 24px #0008;white-space:normal;max-width:90vw;width:max-content}#routeNotice.show{opacity:1;transform:translateX(-50%) translateY(0)}
     .stats{display:flex;gap:10px;align-items:flex-start}.scoreStack{display:flex;flex-direction:column;gap:6px}.vehicleBar{padding:6px 10px;font-size:12px;min-width:120px}.vehicleBar .meter{height:6px;background:#ffffff1f;border-radius:999px;overflow:hidden;margin-top:5px}.vehicleBar .meter>i{display:block;height:100%;background:currentColor;border-radius:999px}.pill{background:#080b1dcc;border:1px solid #ffffff2c;border-radius:14px;padding:9px 14px;backdrop-filter:blur(9px);font-weight:800;font-size:clamp(13px,2vw,16px)}
@@ -62,6 +62,19 @@
       #mobAction{width:58px;height:58px;font-size:10px}
       #mobRocket{width:56px;height:38px;font-size:10px}
       #mobPause{width:44px;height:36px;font-size:14px}
+
+      /* Landscape menus/game-over: fit inside the actually visible phone height. */
+      #overlay{padding:6px;align-items:center}
+      .card{width:min(700px,86vw);max-height:calc(100dvh - 12px);overflow:auto;border-radius:18px;padding:12px 22px}
+      .tag{margin:4px 0 8px;font-size:10px;letter-spacing:4px}
+      h1{font-size:clamp(34px,9vh,52px);line-height:.82;letter-spacing:-2px}
+      .scoreBig{font-size:32px;margin:4px 0}
+      .best{margin-bottom:8px;font-size:12px}
+      .controls{gap:16px;margin:7px 0 10px;font-size:11px}
+      .menuBtns{gap:7px}
+      button{padding:8px 12px;font-size:12px;border-radius:10px}
+      #gameOver .tag{margin-top:0}
+      #gameOver h1{font-size:clamp(36px,10vh,58px)}
     }
     @media (max-width:520px){
       .mobilePad{left:10px;bottom:max(10px,env(safe-area-inset-bottom));grid-template-columns:52px 52px 52px;grid-template-rows:52px 52px;gap:7px}
@@ -73,7 +86,33 @@
 
     #mute{position:fixed;right:18px;bottom:18px;pointer-events:auto;background:#080b1dcc;border:1px solid #ffffff2c;color:white;border-radius:12px;padding:10px 12px;box-shadow:none;font-size:18px}#pauseBtn{pointer-events:auto;padding:7px 11px;font-size:14px;box-shadow:none;background:#222b48;color:#fff}
     @media(max-width:600px){#hud{padding:10px}.stats{gap:5px;flex-wrap:wrap}.pill{padding:7px 9px}.controls{gap:12px}.tag{letter-spacing:3px}}
-  </style>
+  
+    html.mobileLandscape #overlay{padding:4px;align-items:center}
+    html.mobileLandscape .card{width:min(760px,78vw);max-height:calc(var(--visible-h,100vh) - 8px);overflow:auto;border-radius:14px;padding:8px 16px}
+    html.mobileLandscape #menu h1{font-size:34px;line-height:.8;letter-spacing:-2px}
+    html.mobileLandscape #gameOver h1{font-size:38px;line-height:.8;letter-spacing:-2px}
+    html.mobileLandscape .tag{margin:2px 0 5px;font-size:9px;letter-spacing:3px}
+    html.mobileLandscape .scoreBig{font-size:26px;margin:2px 0}
+    html.mobileLandscape .best{font-size:10px;margin-bottom:5px}
+    html.mobileLandscape #menu .controls{display:none}
+    html.mobileLandscape #menu .hint{display:none}
+    html.mobileLandscape #menu .saveTools{display:none}
+    html.mobileLandscape #menu .saveNote{display:none}
+    html.mobileLandscape .menuBank{margin:4px auto;font-size:12px}
+    html.mobileLandscape .menuBtns{gap:5px;flex-wrap:nowrap}
+    html.mobileLandscape .menuBtns button{padding:7px 9px;font-size:10px}
+    html.mobileLandscape #garage{width:min(820px,92vw);max-height:calc(var(--visible-h,100vh) - 8px);padding:8px 12px}
+    html.mobileLandscape #achievements{width:min(820px,92vw);max-height:calc(var(--visible-h,100vh) - 8px);padding:8px 12px}
+    html.mobileLandscape .mobilePad{left:6px;bottom:6px;grid-template-columns:40px 40px 40px;grid-template-rows:40px 40px;gap:4px}
+    html.mobileLandscape .mobileActions{right:6px;bottom:6px;gap:4px}
+    html.mobileLandscape .mobileBtn{width:40px;height:40px;font-size:17px;border-radius:10px}
+    html.mobileLandscape #mobAction{width:54px;height:54px;font-size:9px}
+    html.mobileLandscape #mobRocket{width:52px;height:34px;font-size:9px}
+    html.mobileLandscape #mobPause{width:40px;height:32px;font-size:13px}
+    html.mobileLandscape #hud{padding:4px 6px}
+    html.mobileLandscape .pill{font-size:8px;padding:3px 6px}
+    html.mobileLandscape #routeNotice{top:36px;font-size:9px;padding:4px 7px;max-width:42vw}
+</style>
 </head>
 <body>
 <canvas id="game"></canvas>
@@ -347,14 +386,14 @@ function sizeRoad(){
   road.w=route.mode==='freeway'?Math.min(W*.96,800):Math.min(W*.88,555);
  }else if(mobile&&landscape){
   // Landscape phones: leave side room for touch controls instead of covering the road.
-  road.w=route.mode==='freeway'?Math.min(W*.62,800):Math.min(W*.54,555);
+  road.w=route.mode==='freeway'?Math.min(W*.52,800):Math.min(W*.46,555);
  }else{
   road.w=route.mode==='freeway'?Math.min(W*.82,800):Math.min(W*.60,555);
  }
  road.x=(W-road.w)/2;road.lane=road.w/road.lanes
 }
-function resize(){dpr=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight;canvas.width=W*dpr;canvas.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);sizeRoad();if(!playing){player.x=W/2;player.y=H*.74}}
-addEventListener('resize',resize);resize();
+function resize(){dpr=Math.min(devicePixelRatio||1,2);const vv=window.visualViewport;W=Math.round(vv?vv.width:innerWidth);H=Math.round(vv?vv.height:innerHeight);document.documentElement.style.setProperty('--visible-h',H+'px');const ml=(('ontouchstart' in window)||(navigator.maxTouchPoints||0)>0)&&W>H;document.documentElement.classList.toggle('mobileLandscape',ml);canvas.width=W*dpr;canvas.height=H*dpr;canvas.style.width=W+'px';canvas.style.height=H+'px';ctx.setTransform(dpr,0,0,dpr,0,0);sizeRoad();if(!playing){player.x=W/2;player.y=H*.74}}
+addEventListener('resize',resize);if(window.visualViewport)visualViewport.addEventListener('resize',resize);resize();
 
 addEventListener('keydown',e=>{if(e.key==='Escape'&&playing){togglePause();return}if(e.code==='Space'&&playing&&!paused&&!e.repeat)useAbility();if(e.code==='KeyC'&&playing&&!paused&&!e.repeat)fireRocket();keys[e.key.toLowerCase()]=true;if(['arrowup','arrowdown','arrowleft','arrowright',' '].includes(e.key.toLowerCase()))e.preventDefault()});addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
 const isTouchDevice=('ontouchstart' in window)||(navigator.maxTouchPoints||0)>0;document.documentElement.classList.toggle('touchDevice',isTouchDevice);
