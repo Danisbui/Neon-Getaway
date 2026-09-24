@@ -7,8 +7,8 @@
   <title>Neon Getaway</title>
   <style>
     :root{color-scheme:dark;--cyan:#39f6ff;--pink:#ff3b81;--gold:#ffd43b}
-    *{box-sizing:border-box}html,body{height:100%;height:100dvh;margin:0;overflow:hidden;background:#050713;font-family:Inter,Segoe UI,Arial,sans-serif;color:#fff}
-    canvas{display:block;position:fixed;inset:0;width:100vw;height:100dvh;touch-action:none}
+    *{box-sizing:border-box}html,body{height:100%;height:100dvh;margin:0;overflow:hidden;background:#000;background:#050713;font-family:Inter,Segoe UI,Arial,sans-serif;color:#fff}
+    canvas{display:block;position:fixed;touch-action:none;background:#050713}
     #hud{position:fixed;inset:0;pointer-events:none;padding:clamp(14px,3vw,28px);display:flex;justify-content:space-between;align-items:flex-start;text-shadow:0 2px 8px #000}
     #routeNotice{position:fixed;top:82px;left:50%;transform:translateX(-50%) translateY(-20px);opacity:0;background:#087a4aee;border:2px solid #d9fff0;border-radius:10px;padding:10px 20px;font-weight:1000;letter-spacing:1px;text-align:center;transition:.25s;pointer-events:none;box-shadow:0 5px 24px #0008;white-space:normal;max-width:90vw;width:max-content}#routeNotice.show{opacity:1;transform:translateX(-50%) translateY(0)}
     .stats{display:flex;gap:10px;align-items:flex-start}.scoreStack{display:flex;flex-direction:column;gap:6px}.vehicleBar{padding:6px 10px;font-size:12px;min-width:120px}.vehicleBar .meter{height:6px;background:#ffffff1f;border-radius:999px;overflow:hidden;margin-top:5px}.vehicleBar .meter>i{display:block;height:100%;background:currentColor;border-radius:999px}.pill{background:#080b1dcc;border:1px solid #ffffff2c;border-radius:14px;padding:9px 14px;backdrop-filter:blur(9px);font-weight:800;font-size:clamp(13px,2vw,16px)}
@@ -112,6 +112,13 @@
     html.mobileLandscape #hud{padding:4px 6px}
     html.mobileLandscape .pill{font-size:8px;padding:3px 6px}
     html.mobileLandscape #routeNotice{top:36px;font-size:9px;padding:4px 7px;max-width:42vw}
+
+html.mobileLandscape .mobilePad{left:6px;bottom:max(6px,env(safe-area-inset-bottom));grid-template-columns:42px 42px 42px;grid-template-rows:42px 42px;gap:4px}
+html.mobileLandscape .mobileActions{right:6px;bottom:max(6px,env(safe-area-inset-bottom));gap:4px}
+html.mobileLandscape .mobileBtn{width:42px;height:42px;font-size:18px;border-radius:11px;background:#07101ddd}
+html.mobileLandscape #mobAction{width:56px;height:56px;font-size:9px}
+html.mobileLandscape #mobRocket{width:54px;height:36px;font-size:9px}
+html.mobileLandscape #mobPause{width:42px;height:34px;font-size:13px}
 </style>
 </head>
 <body>
@@ -272,7 +279,7 @@ function updateExpansion(dt){
    }
   }
   if(time>=boss.fire){boss.fire=time+1.8;const a=Math.atan2(player.y-boss.y,player.x-boss.x);enemyShells.push({x:boss.x,y:boss.y+45,vx:Math.cos(a)*240,vy:Math.sin(a)*240,w:16,h:16});tone(70,.14,'square',.03)}
-  if(time>=boss.spikes){boss.spikes=time+5;objects.push({type:'spikes',x:road.x+road.lane*(Math.floor(Math.random()*road.lanes)+.5),y:boss.y+65,w:road.lane*.7,h:25})}
+  if(time>=boss.spikes){boss.spikes=time+5;objects.push({type:'spikes',x:road.x+road.lane*(Math.floor(Math.random()*road.lanes)+.5),y:-35,w:road.lane*.7,h:25,boost:260})}
   if(!boss.unitWarned&&time>=boss.units-3){boss.unitWarned=true;showRoute('REINFORCEMENTS WILL APPEAR IN 3 SECONDS')}if(time>=boss.units){boss.units=time+20;boss.unitWarned=false;const roll=Math.random();const type=roll<.30?'police':roll<.60?'swat':roll<.80?'monster':'army';const previous=new Set(police);spawnCop(type,0);spawnCop(type,1);police.forEach(p=>{if(!previous.has(p))p.reinforcement=true})}
   for(let i=rockets.length-1;i>=0;i--){const r=rockets[i],dx=boss.x-r.x,dy=boss.y-r.y,d=Math.hypot(dx,dy),step=620*dt;if(d<=step+45){rockets.splice(i,1);boss.hp--;burst(boss.x,boss.y,'#ffb53a',14);if(boss.hp<=0){beginEscape();return}}else{r.x+=dx/d*step;r.y+=dy/d*step}}
   
@@ -380,19 +387,22 @@ document.querySelector('#pauseBtn').onclick=togglePause;document.querySelector('
 function sizeRoad(){
  road.lanes=route.mode==='freeway'?4:3;
  const vv=window.visualViewport;
- const vw=vv?vv.width:innerWidth, vh=vv?vv.height:innerHeight;
- const mobile=(vw<=900)||((navigator.maxTouchPoints||0)>0);
- const landscape=vw>vh;
- if(mobile&&!landscape){
-  // Portrait phones: use almost the whole screen so the highway doesn't look tiny.
-  road.w=route.mode==='freeway'?Math.min(W*.96,800):Math.min(W*.88,555);
- }else if(mobile&&landscape){
-  // Landscape phones: leave side room for touch controls instead of covering the road.
-  road.w=route.mode==='freeway'?Math.min(W*.52,800):Math.min(W*.46,555);
- }else{
+ const vw=vv?vv.width:innerWidth,vh=vv?vv.height:innerHeight;
+ const touch=(('ontouchstart' in window)||(navigator.maxTouchPoints||0)>0);
+ const ml=touch&&vw>vh;
+ if(ml){
   road.w=route.mode==='freeway'?Math.min(W*.82,800):Math.min(W*.60,555);
+ }else{
+  const mobile=(vw<=900)||touch;
+  const landscape=vw>vh;
+  if(mobile&&!landscape){
+   road.w=route.mode==='freeway'?Math.min(W*.96,800):Math.min(W*.88,555);
+  }else{
+   road.w=route.mode==='freeway'?Math.min(W*.82,800):Math.min(W*.60,555);
+  }
  }
- road.x=(W-road.w)/2;road.lane=road.w/road.lanes
+ road.x=(W-road.w)/2;
+ road.lane=road.w/road.lanes
 }
 function resize(){
  dpr=Math.min(devicePixelRatio||1,2);
@@ -400,15 +410,28 @@ function resize(){
  const vw=Math.round(vv?vv.width:innerWidth),vh=Math.round(vv?vv.height:innerHeight);
  const touch=(('ontouchstart' in window)||(navigator.maxTouchPoints||0)>0);
  const ml=touch&&vw>vh;
- const worldScale=ml?1.38:1;
- W=Math.round(vw*worldScale);H=Math.round(vh*worldScale);
  document.documentElement.style.setProperty('--visible-h',vh+'px');
  document.documentElement.classList.toggle('mobileLandscape',ml);
- canvas.width=W*dpr;canvas.height=H*dpr;
- canvas.style.width=vw+'px';canvas.style.height=vh+'px';
+
+ if(ml){
+  W=1280;H=720;
+  const fit=Math.min(vw/W,vh/H);
+  const cssW=Math.round(W*fit),cssH=Math.round(H*fit);
+  canvas.width=W*dpr;canvas.height=H*dpr;
+  canvas.style.width=cssW+'px';canvas.style.height=cssH+'px';
+  canvas.style.left=Math.round((vw-cssW)/2)+'px';
+  canvas.style.top=Math.round((vh-cssH)/2)+'px';
+  canvas.style.right='auto';canvas.style.bottom='auto';
+ }else{
+  W=vw;H=vh;
+  canvas.width=W*dpr;canvas.height=H*dpr;
+  canvas.style.width=vw+'px';canvas.style.height=vh+'px';
+  canvas.style.left='0px';canvas.style.top='0px';
+  canvas.style.right='auto';canvas.style.bottom='auto';
+ }
  ctx.setTransform(dpr,0,0,dpr,0,0);
  sizeRoad();
- if(!playing){player.x=W/2;player.y=H*.76}
+ if(!playing){player.x=W/2;player.y=H*.74}
 }
 addEventListener('resize',resize);if(window.visualViewport)visualViewport.addEventListener('resize',resize);resize();
 
@@ -465,19 +488,26 @@ let minX=road.x+28,maxX=road.x+road.w-28;if(route.event==='exit'||route.event===
 player.x=Math.max(minX,Math.min(maxX,player.x));if((route.event==='exit'||route.event==='junction')&&player.x>road.x+road.w+24){switchRoad(route.mode==='freeway'?'street':'tracks')}else if((route.event==='entrance'||route.event==='junction')&&player.x<road.x-24){switchRoad(route.mode==='tracks'?'street':'freeway')}
 const minPY=85,maxPY=H-55;player.y=Math.max(minPY,Math.min(maxPY,player.y));
 if(document.documentElement.classList.contains('mobileLandscape')&&!keys.arrowup&&!keys.arrowdown){
- const targetY=H*.78;
+ const targetY=H*.86;
  player.y+=(targetY-player.y)*Math.min(1,dt*2.2);
 }
 player.angle=player.vx*.0005;
 if(time-(update.spawnT||0) > Math.max(.42,1.0-time*.006)){spawn();update.spawnT=time}
 for(let i=objects.length-1;i>=0;i--){const o=objects[i];if(o.missileCover&&time>=(o.coverUntil||0)){o.missileCover=false;o.covering=false;o.coverLeaving=true}const moveFactor=o.coverLeaving?1.45:((o.missileCover&&time<(o.coverUntil||0))?0:((o.type==='traffic'||o.type==='truck')?.72:1));o.y+=speed*dt*moveFactor-(o.boost||0)*dt;o.boost=Math.max(0,(o.boost||0)-360*dt);if(o.y-o.h/2>H+110&&!(o.missileCover&&time<(o.coverUntil||0))){objects.splice(i,1);continue}if(o.type==='dirt')continue;if(hit(player,o,o.type==='cash'?0:7)){if(o.coverLeaving)continue;if(o.type==='truck'&&o.missileCover&&megaMissile){o.covering=true;continue}if(o.type==='truck'&&o.powerCrate){const fast=Math.random()<.5;if(fast){rocketBoostUntil=time+5;showRoute('GOLD CRATE · 1.5× ROCKET FIRE RATE · 5s')}else{powerShield++;showRoute('GOLD CRATE · SHIELD +1')}burst(o.x,o.y,'#ffd43b',30);tone(920,.18,'sine',.05);objects.splice(i,1);continue}if(o.type==='grass'){if(!o.contact){o.contact=true;impact()}player.x=player.x<o.x?o.x-o.w/2-player.w/2-2:o.x+o.w/2+player.w/2+2;player.vx=0;continue}if(o.daniel){instantCrash();objects.splice(i,1)}else if(o.type==='cash'){const payout=(selected===5?500:100)*(sixStarActive?2:1);money+=payout;record('moneyCollected',payout);localStorage.neonGetawayCash=money;score+=(selected===5?1250:250)*(sixStarActive?2:1);showRoute(`${sixStarActive?'6★ DOUBLE CASH · ':''}+$${payout}`);tone(880,.08,'sine',.04);for(let n=0;n<12;n++)particles.push({x:o.x,y:o.y,vx:(Math.random()-.5)*180,vy:(Math.random()-.5)*180,life:.6,color:'#ffd43b'});objects.splice(i,1)}else if(o.type==='oil'){slideTimer=2.4;record('oilHits');showRoute('OIL SPILL · LOW GRIP!');tone(135,.2,'sawtooth',.04);objects.splice(i,1)}else if(selected===6){tankImpact(o.x,o.y);objects.splice(i,1)}else if(!crash()){burst(o.x,o.y);objects.splice(i,1)}}}
-// Active missile cover truck acts like a solid shield: traffic that reaches it is destroyed.
+// Active missile cover truck acts like a full protective shield.
+// Any harmful road obstacle that reaches it is destroyed before it can bother the player.
 const activeCover=objects.find(o=>o.missileCover&&time<(o.coverUntil||0));
 if(activeCover){
+ const harmless=new Set(['cash','dirt']);
  for(let i=objects.length-1;i>=0;i--){
   const o=objects[i];
-  if(o===activeCover||!(o.type==='traffic'||(o.type==='truck'&&!o.missileCover)))continue;
-  if(hit(activeCover,o,2)){burst(o.x,o.y,'#ffb35a',22);objects.splice(i,1);shake=Math.max(shake,5);tone(95,.12,'square',.035)}
+  if(o===activeCover||harmless.has(o.type)||o.powerCrate)continue;
+  if(hit(activeCover,o,4)){
+   burst(o.x,o.y,o.type==='oil'?'#6655ff':'#ffb35a',o.type==='grass'?30:22);
+   objects.splice(i,1);
+   shake=Math.max(shake,5);
+   tone(o.type==='spikes'?180:95,.12,'square',.035);
+  }
  }
 }
 // Nitro Bee rear stinger: one rear-only contact destroys the thing that hits it, then breaks for the rest of the chase.
