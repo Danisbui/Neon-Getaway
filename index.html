@@ -475,46 +475,77 @@ function resetStick(){
  if(mobStickThumb)mobStickThumb.style.transform='translate(-50%,-50%)';
 }
 function updateStick(clientX,clientY){
- if(!mobStick||!mobStickThumb||!playing||paused)return;
+ if(!mobStick||!mobStickThumb||!playing||paused||!Number.isFinite(clientX)||!Number.isFinite(clientY))return;
  const r=mobStick.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2;
  let dx=clientX-cx,dy=clientY-cy;
  const max=r.width*.30,len=Math.hypot(dx,dy)||1,scale=len>max?max/len:1;
  dx*=scale;dy*=scale;
  mobStick.classList.add('active');
  mobStickThumb.style.transform=`translate(calc(-50% + ${dx}px),calc(-50% + ${dy}px))`;
- const dead=r.width*.11;
- keys.arrowleft=dx<-dead;keys.arrowright=dx>dead;
- keys.arrowup=dy<-dead;keys.arrowdown=dy>dead;
+ const dead=r.width*.13;
+ keys.arrowleft=dx<-dead;
+ keys.arrowright=dx>dead;
+ keys.arrowup=dy<-dead;
+ keys.arrowdown=dy>dead;
 }
-function startStick(e){
+function stickPointerDown(e){
  e.preventDefault();
- if(!playing||paused)return;
+ if(!playing||paused||stickActive)return;
  stickActive=true;
- stickPointerId=e.pointerId??'touch';
- updateStick(e.clientX??e.touches?.[0]?.clientX,e.clientY??e.touches?.[0]?.clientY);
+ stickPointerId=e.pointerId;
+ try{mobStick.setPointerCapture(e.pointerId)}catch{}
+ updateStick(e.clientX,e.clientY);
 }
-function moveStick(e){
- if(!stickActive)return;
+function stickPointerMove(e){
+ if(!stickActive||e.pointerId!==stickPointerId)return;
  e.preventDefault();
- if(e.pointerId!=null&&stickPointerId!==e.pointerId)return;
- const t=e.touches?e.touches[0]:e;
- if(!t)return;
- updateStick(t.clientX,t.clientY);
+ updateStick(e.clientX,e.clientY);
 }
-function endStick(e){
- if(e&&e.pointerId!=null&&stickPointerId!==e.pointerId)return;
- if(e)e.preventDefault();
+function stickPointerUp(e){
+ if(!stickActive||e.pointerId!==stickPointerId)return;
+ e.preventDefault();
+ try{mobStick.releasePointerCapture(e.pointerId)}catch{}
  resetStick();
 }
 if(mobStick){
- mobStick.addEventListener('pointerdown',startStick);
- mobStick.addEventListener('pointermove',moveStick);
- mobStick.addEventListener('pointerup',endStick);
- mobStick.addEventListener('pointercancel',endStick);
- mobStick.addEventListener('touchstart',startStick,{passive:false});
- mobStick.addEventListener('touchmove',moveStick,{passive:false});
- mobStick.addEventListener('touchend',endStick,{passive:false});
- mobStick.addEventListener('touchcancel',endStick,{passive:false});
+ if(window.PointerEvent){
+  mobStick.addEventListener('pointerdown',stickPointerDown);
+  mobStick.addEventListener('pointermove',stickPointerMove);
+  mobStick.addEventListener('pointerup',stickPointerUp);
+  mobStick.addEventListener('pointercancel',stickPointerUp);
+  mobStick.addEventListener('lostpointercapture',()=>resetStick());
+ }else{
+  let touchId=null;
+  const findTouch=e=>{
+   const all=[...(e.touches||[]),...(e.changedTouches||[])];
+   return all.find(t=>t.identifier===touchId);
+  };
+  mobStick.addEventListener('touchstart',e=>{
+   e.preventDefault();
+   if(!playing||paused||stickActive)return;
+   const t=e.changedTouches[0];
+   if(!t)return;
+   stickActive=true;touchId=t.identifier;
+   updateStick(t.clientX,t.clientY);
+  },{passive:false});
+  mobStick.addEventListener('touchmove',e=>{
+   if(!stickActive)return;
+   const t=findTouch(e);
+   if(!t)return;
+   e.preventDefault();
+   updateStick(t.clientX,t.clientY);
+  },{passive:false});
+  const end=e=>{
+   if(!stickActive)return;
+   const ended=[...(e.changedTouches||[])].some(t=>t.identifier===touchId);
+   if(!ended)return;
+   e.preventDefault();
+   touchId=null;
+   resetStick();
+  };
+  mobStick.addEventListener('touchend',end,{passive:false});
+  mobStick.addEventListener('touchcancel',end,{passive:false});
+ }
 }
 const useMobAction=e=>{e.preventDefault();if(playing&&!paused)useAbility()};
 const useMobRocket=e=>{e.preventDefault();if(playing&&!paused)fireRocket()};
