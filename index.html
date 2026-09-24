@@ -34,7 +34,8 @@
     #mobAction{width:76px;height:76px;border-radius:50%;font-size:14px;line-height:1.05;background:#153d62dd}
     #mobRocket{width:66px;height:52px;font-size:13px;display:none}
     #mobPause{width:58px;height:48px;font-size:18px}
-    @media (hover:none) and (pointer:coarse){
+    html.touchDevice #mobileControls.chaseActive{display:block}
+    @media (hover:none), (pointer:coarse), (max-width:900px){
       #mobileControls.chaseActive{display:block}
       #hud{padding:10px}
       .stats{gap:6px;flex-wrap:wrap;max-width:78vw}
@@ -322,6 +323,7 @@ function resize(){dpr=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight
 addEventListener('resize',resize);resize();
 
 addEventListener('keydown',e=>{if(e.key==='Escape'&&playing){togglePause();return}if(e.code==='Space'&&playing&&!paused&&!e.repeat)useAbility();if(e.code==='KeyC'&&playing&&!paused&&!e.repeat)fireRocket();keys[e.key.toLowerCase()]=true;if(['arrowup','arrowdown','arrowleft','arrowright',' '].includes(e.key.toLowerCase()))e.preventDefault()});addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
+const isTouchDevice=('ontouchstart' in window)||(navigator.maxTouchPoints||0)>0;document.documentElement.classList.toggle('touchDevice',isTouchDevice);
 const mobileControls=document.querySelector('#mobileControls'),mobRocket=document.querySelector('#mobRocket'),mobAction=document.querySelector('#mobAction');
 function syncMobileControls(){if(mobileControls)mobileControls.classList.toggle('chaseActive',!!playing&&!paused)}
 const touchMap={mobUp:'arrowup',mobDown:'arrowdown',mobLeft:'arrowleft',mobRight:'arrowright'};
@@ -330,12 +332,17 @@ for(const [id,key] of Object.entries(touchMap)){
  const down=e=>{e.preventDefault();if(!playing||paused)return;keys[key]=true;b.classList.add('active')};
  const up=e=>{e.preventDefault();keys[key]=false;b.classList.remove('active')};
  b.addEventListener('pointerdown',down);b.addEventListener('pointerup',up);b.addEventListener('pointercancel',up);b.addEventListener('pointerleave',up);
+ b.addEventListener('touchstart',down,{passive:false});b.addEventListener('touchend',up,{passive:false});b.addEventListener('touchcancel',up,{passive:false});
 }
-mobAction.addEventListener('pointerdown',e=>{e.preventDefault();if(playing&&!paused)useAbility()});
-mobRocket.addEventListener('pointerdown',e=>{e.preventDefault();if(playing&&!paused)fireRocket()});
-document.querySelector('#mobPause').addEventListener('pointerdown',e=>{e.preventDefault();if(playing)togglePause()});
+const useMobAction=e=>{e.preventDefault();if(playing&&!paused)useAbility()};
+const useMobRocket=e=>{e.preventDefault();if(playing&&!paused)fireRocket()};
+const useMobPause=e=>{e.preventDefault();if(playing)togglePause()};
+mobAction.addEventListener('pointerdown',useMobAction);mobAction.addEventListener('touchstart',useMobAction,{passive:false});
+mobRocket.addEventListener('pointerdown',useMobRocket);mobRocket.addEventListener('touchstart',useMobRocket,{passive:false});
+document.querySelector('#mobPause').addEventListener('pointerdown',useMobPause);document.querySelector('#mobPause').addEventListener('touchstart',useMobPause,{passive:false});
 
 addEventListener('blur',()=>{keys.arrowup=keys.arrowdown=keys.arrowleft=keys.arrowright=false});
+addEventListener('resize',()=>{if(isTouchDevice)syncMobileControls()});
 function tone(f=220,d=.08,type='square',vol=.025){if(muted)return;audio??=new (window.AudioContext||window.webkitAudioContext)();const o=audio.createOscillator(),g=audio.createGain();o.type=type;o.frequency.setValueAtTime(f,audio.currentTime);g.gain.setValueAtTime(vol,audio.currentTime);g.gain.exponentialRampToValueAtTime(.001,audio.currentTime+d);o.connect(g).connect(audio.destination);o.onended=()=>{o.disconnect();g.disconnect()};o.start();o.stop(audio.currentTime+d)}
 function fireTank(){if(escapeTime>=0)return;if(selected!==6||tankCooldown>0)return;let tx=player.x,ty=-100;if(police.length){const target=police.reduce((a,b)=>Math.hypot(b.x-player.x,b.y-player.y)<Math.hypot(a.x-player.x,a.y-player.y)?b:a);tx=target.x;ty=target.y}const a=Math.atan2(ty-player.y,tx-player.x);shells.push({x:player.x,y:player.y-28,vx:Math.cos(a)*700,vy:Math.sin(a)*700,w:14,h:14});tankCooldown=1.15;shake=5;tone(58,.18,'square',.09)}
 function car(x,y,color,w=44,h=78,design=-1){ctx.save();ctx.translate(x,y);ctx.fillStyle='#0008';round(-w/2+4,-h/2+8,w,h,9);ctx.fillStyle=color;round(-w/2,-h/2,w,h,10);ctx.fillStyle='#0a1327';round(-w*.34,-h*.2,w*.68,h*.34,5);ctx.fillStyle='#d8f7ff';ctx.fillRect(-w*.33,-h*.42,w*.18,5);ctx.fillRect(w*.15,-h*.42,w*.18,5);ctx.fillStyle='#ff304f';ctx.fillRect(-w*.33,h*.34,w*.18,5);ctx.fillRect(w*.15,h*.34,w*.18,5);
@@ -349,7 +356,7 @@ if(design===5){ctx.fillStyle='#ffe65a';ctx.fillRect(-3,-h*.43,6,h*.86);ctx.fillS
 if(design===6){ctx.fillStyle='#272d1d';round(-w*.55,-h*.4,w*.22,h*.82,5);round(w*.33,-h*.4,w*.22,h*.82,5);ctx.fillStyle='#88945d';ctx.beginPath();ctx.arc(0,-3,w*.27,0,Math.PI*2);ctx.fill();ctx.fillStyle='#2d351f';ctx.fillRect(-5,-h*.56,10,h*.48);ctx.fillStyle='#e6d88b';ctx.font='1000 16px Arial';ctx.textAlign='center';ctx.fillText('★',0,18)}
 ctx.restore()}
 function round(x,y,w,h,r){ctx.beginPath();ctx.roundRect(x,y,w,h,r);ctx.fill()}
-function start(){resetExpansion();playing=true;paused=false;localStorage.removeItem('neonGetawayRun');refreshContinue();overlay.style.display='none';menu.style.display='block';over.style.display='none';garage.style.display='none';pauseMenu.style.display=achievementsPanel.style.display='none';hud.hidden=false;objects.length=particles.length=police.length=shells.length=enemyShells.length=0;score=time=road.scroll=0;update.spawnT=update.armySpawn=0;speed=430;sixStarActive=false;armyWaveStage=0;armorReady=selected===3;invincible=slideTimer=tankShield=tankCooldown=0;tankLives=10;lastWanted=1;empAt=4;route.mode='freeway';route.event='none';route.next=9;route.until=0;sizeRoad();locationEl.textContent='FREEWAY';notice.classList.remove('show');player.w=selected===6?64:44;player.h=selected===6?92:78;player.x=W/2;player.y=H*.73;player.vx=player.vy=0;last=performance.now();saveGarage();record('chases');tone(440,.12);ensureLoop()}
+function start(){resetExpansion();playing=true;paused=false;localStorage.removeItem('neonGetawayRun');refreshContinue();overlay.style.display='none';menu.style.display='block';over.style.display='none';garage.style.display='none';pauseMenu.style.display=achievementsPanel.style.display='none';hud.hidden=false;objects.length=particles.length=police.length=shells.length=enemyShells.length=0;score=time=road.scroll=0;update.spawnT=update.armySpawn=0;speed=430;sixStarActive=false;armyWaveStage=0;armorReady=selected===3;invincible=slideTimer=tankShield=tankCooldown=0;tankLives=10;lastWanted=1;empAt=4;route.mode='freeway';route.event='none';route.next=9;route.until=0;sizeRoad();locationEl.textContent='FREEWAY';notice.classList.remove('show');player.w=selected===6?64:44;player.h=selected===6?92:78;player.x=W/2;player.y=H*.73;player.vx=player.vy=0;last=performance.now();saveGarage();record('chases');syncMobileControls();tone(440,.12);ensureLoop()}
 document.querySelector('#start').onclick=start;document.querySelector('#restart').onclick=start;document.querySelector('#mute').onclick=()=>{muted=!muted;document.querySelector('#mute').textContent=muted?'🔇':'🔊'};
 function spawn(){if(route.mode==='tracks')return;const divider=route.mode==='street'&&(grassWarningAt>0||objects.some(o=>o.type==='grass'||o.type==='dirt')),lane=divider?(Math.random()<.5?0:2):Math.floor(Math.random()*road.lanes),type=Math.random();let o={x:road.x+road.lane*(lane+.5),y:-100,w:42,h:72,type:'traffic',color:['#ffb52e','#45e07b','#a468ff','#ef4774'][Math.floor(Math.random()*4)]};if(route.mode==='street'&&type<.11){o.type='manhole';o.w=o.h=48}else if(route.mode==='street'&&type<.23){o.type='oil';o.w=70;o.h=48}else if(type<.38){o.type='cash';o.w=o.h=32}else if(type<.52&&!divider){o.type='barrier';o.w=road.lane*.65;o.h=28;o.color='#ff7b22'}if(o.type==='traffic'&&boss&&boss.hp>0&&Math.random()<.05){o.type='truck';o.w=50;o.h=144;o.color='#78632d';o.powerCrate=true}else if(o.type==='traffic'&&Math.random()<.075){o.type='truck';o.w=50;o.h=144;o.color=['#7f8b96','#b55d3b','#486f9f','#8f7448'][Math.floor(Math.random()*4)]}if(o.type==='traffic'&&Math.random()<.001){o.daniel=true;o.color='#f2f2f2';record('danielEncounter')}objects.push(o)}
 function showRoute(text){notice.textContent=text;notice.classList.add('show')}
