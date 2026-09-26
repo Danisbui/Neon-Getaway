@@ -187,7 +187,7 @@ html.mobileLandscape #mobPause{width:42px;height:34px;font-size:13px}
 </div>
 <div id="overlay">
   <section class="card" id="menu"><h1>Neon<br>Getaway</h1><div class="tag">Lose the law</div><div class="controls"><div><span class="key">WASD</span><br><small>DRIVE</small></div><div><span class="key">↑ ↓ ← →</span><br><small>DRIVE</small></div></div><p class="hint">Dodge traffic and roadblocks. Grab cash. Police get faster the longer you survive. SPACE: boost / tank cannon. C: boss rocket.</p><div class="bank menuBank">$500</div><div class="menuBtns"><button id="continue" style="display:none">CONTINUE CHASE</button><button id="start">NEW CHASE</button><button class="secondary" id="multiplayerBtn">2 PLAYER</button><button class="secondary openGarage">GARAGE</button><button class="secondary openAchievements">ACHIEVEMENTS</button></div><div class="saveTools"><button id="exportSave">EXPORT SAVE</button><button id="importSave">IMPORT SAVE</button></div><div class="saveNote">Export before replacing the game file to carry your progress forward.</div></section>
-  <section class="card" id="gameOver"><div class="tag">Busted</div><h1>CHASE<br>OVER</h1><div class="scoreBig" id="finalScore">0</div><div class="best" id="bestScore">BEST: 0</div><div class="bank menuBank">$500</div><div class="menuBtns"><button id="spectateBtn" style="display:none">SPECTATE</button><button id="restart">RUN IT BACK</button><button class="secondary openGarage">GARAGE</button><button class="secondary openAchievements">ACHIEVEMENTS</button></div></section>
+  <section class="card" id="gameOver"><div class="tag">Busted</div><h1>CHASE<br>OVER</h1><div class="scoreBig" id="finalScore">0</div><div class="best" id="bestScore">BEST: 0</div><div class="bank menuBank">$500</div><div class="menuBtns"><button id="spectateBtn" style="display:none">SPECTATE</button><button id="returnMpLobby" style="display:none">2 PLAYER LOBBY</button><button id="restart">RUN IT BACK</button><button class="secondary openGarage">GARAGE</button><button class="secondary openAchievements">ACHIEVEMENTS</button></div></section>
   <section class="card" id="garage"><div class="garageHead"><h2>GETAWAY GARAGE</h2><button class="closeBtn" id="closeGarage">✕</button></div><div class="bank" id="garageBank">$500</div><div id="carGrid" class="carGrid"></div><div class="crateResult" id="crateResult"></div><p class="hint">Crates cost $500. Seven vehicles, seven rarities. Keep one copy; extras sell for 20% value.</p><div class="luckyInfo" id="luckyInfo"></div><div class="spinButtons"><button class="secondary" id="buyCrate">OPEN $500 CRATE</button><button id="luckySpin">LUCKY SPIN · $2,500</button></div></section>
   <section class="card" id="pauseMenu"><div class="tag">Chase paused</div><h1>TAKE A<br>BREATHER</h1><p class="hint">Save your exact chase and continue later—even after closing the file.</p><div class="menuBtns"><button id="resume">RESUME</button><button class="secondary" id="saveQuit">SAVE & QUIT</button></div></section>
   <section class="card" id="multiplayerPanel" style="display:none">
@@ -222,9 +222,11 @@ let W,H,dpr,playing=false,paused=false,last=0,time=0,score=0,money=Number(localS
 const MAX_POLICE=24,MAX_PARTICLES=360;
 const multiplayerPanel=document.querySelector('#multiplayerPanel'),mpStatus=document.querySelector('#mpStatus'),mpModeBtn=document.querySelector('#mpModeBtn'),mpModeHelp=document.querySelector('#mpModeHelp'),mpSabotageBtn=document.querySelector('#mpSabotageBtn'),mpSabotageHelp=document.querySelector('#mpSabotageHelp'),inviteLinkEl=document.querySelector('#inviteLink'),copyInviteBtn=document.querySelector('#copyInvite'),startTwoPlayerBtn=document.querySelector('#startTwoPlayer'),exitTwoPlayerBtn=document.querySelector('#exitTwoPlayer');
 const spectatorHud=document.querySelector('#spectatorHud'),spectateBtn=document.querySelector('#spectateBtn'),sabotagePointsEl=document.querySelector('#sabotagePoints'),obstacleCooldownText=document.querySelector('#obstacleCooldownText');
+const returnMpLobbyBtn=document.querySelector('#returnMpLobby');
 let mpPeer=null,mpConn=null,mpIsHost=false,mpConnected=false,mpMode='collision',mpSabotageEnabled=true,mpSendAt=0,mpCollisionCooldown=0;
 let mpKeepAliveTimer=setInterval(()=>{if(mpConnected&&mpConn&&mpConn.open){try{mpConn.send({type:'ping'})}catch{}}},10000);
 let mpRemote={nx:.5,ny:.73,selected:0,w:44,h:78,angle:0,lastSeen:0,alive:true,score:0,wanted:1};
+let mpLocalAlive=true;
 let mpSpectating=false,sabotagePoints=0,sabotagePointTimer=0,obstacleUses=0,obstacleCooldown=0;
 
 const keys={},objects=[],particles=[],police=[],shells=[],enemyShells=[]; const road={x:0,w:0,lane:0,scroll:0,lanes:4};
@@ -304,7 +306,7 @@ function impact(){if(powerShield>0){powerShield--;invincible=1.6;record('hitsSur
 function fireRocket(){if(!boss||boss.hp<=0||rocketCooldown>0||escapeTime>=0)return;rockets.push({x:player.x,y:player.y,w:14,h:24});rocketCooldown=time<rocketBoostUntil?2/1.5:2;tone(140,.2,'sawtooth',.06)}
 function beginBoss(){rhinoRegen=time+30;boss={x:W/2,y:150,w:110,h:110,hp:20,fire:time+2,spikes:time+4,units:time+20,unitWarned:false,mega:time+28};trainWarning=null;trains=[];objects.length=0;route.event='none';route.next=Infinity;showRoute('FINAL BOSS · C: ROCKET · 20 HP');tone(65,.7,'sawtooth',.08)}
 function beginEscape(){escapeTime=0;objects.length=police.length=shells.length=enemyShells.length=0;trains=[];rockets=[];trainWarning=null;clearNotices();burst(boss.x,boss.y,'#ff9033',90)}
-function finishEscape(){if(escapePaid)return;if(mpConnected&&mpConn&&mpConn.open){try{mpConn.send({type:'dead'})}catch{}}escapePaid=true;money+=50000;record('totalScore',Math.floor(score));localStorage.neonGetawayBest=Math.max(Number(localStorage.neonGetawayBest||0),Math.floor(score));localStorage.removeItem('neonGetawayRun');saveGarage();refreshContinue();playing=false;syncMobileControls();hud.hidden=true;overlay.style.display='grid';menu.style.display=garage.style.display=pauseMenu.style.display=achievementsPanel.style.display='none';over.style.display='block';document.querySelector('#gameOver .tag').textContent='SUCCESSFUL ESCAPE · +$50,000';document.querySelector('#gameOver h1').innerHTML='YOU<br>ESCAPED';finalEl.textContent=Math.floor(score).toLocaleString();bestEl.textContent='BEST: '+Number(localStorage.neonGetawayBest).toLocaleString();particles.length=0}
+function finishEscape(){if(escapePaid)return;mpLocalAlive=false;if(mpConnected&&mpConn&&mpConn.open){try{mpConn.send({type:'dead'})}catch{}}escapePaid=true;money+=50000;record('totalScore',Math.floor(score));localStorage.neonGetawayBest=Math.max(Number(localStorage.neonGetawayBest||0),Math.floor(score));localStorage.removeItem('neonGetawayRun');saveGarage();refreshContinue();playing=false;syncMobileControls();hud.hidden=true;overlay.style.display='grid';menu.style.display=garage.style.display=pauseMenu.style.display=achievementsPanel.style.display='none';over.style.display='block';document.querySelector('#gameOver .tag').textContent='SUCCESSFUL ESCAPE · +$50,000';document.querySelector('#gameOver h1').innerHTML='YOU<br>ESCAPED';finalEl.textContent=Math.floor(score).toLocaleString();bestEl.textContent='BEST: '+Number(localStorage.neonGetawayBest).toLocaleString();particles.length=0}
 function updateExpansion(dt){
  rocketCooldown=Math.max(0,rocketCooldown-dt);boostLeft=Math.max(0,boostLeft-dt);boostCooldown=Math.max(0,boostCooldown-dt);goldCooldown=Math.max(0,goldCooldown-dt);
  if(selected===0&&boostCooldown<=0&&!boostReadyNotified){boostReadyNotified=true;showRoute('BOOST READY · PRESS SPACE');tone(760,.12,'sine',.04)}
@@ -726,7 +728,8 @@ function mpAttachConnection(conn){
    updateSabotageUI();
   }else if(data.type==='start'){
    mpRemote.alive=true;
-   if(!playing)start();
+   mpLocalAlive=true;
+   if(!playing)start(true);
    if(mpConn&&mpConn.open)mpConn.send({type:'alive'});
    showRoute('2 PLAYER CHASE STARTED');
   }else if(data.type==='exit'){
@@ -736,6 +739,12 @@ function mpAttachConnection(conn){
    mpRemote.alive=false;
    spectateBtn.style.display='none';
    if(mpSpectating){stopSpectating(true);showRoute('PLAYER 2 IS OUT');}
+   if(!mpLocalAlive){
+    const restartBtn=document.querySelector('#restart');
+    restartBtn.style.display='none';
+    restartBtn.disabled=true;
+    returnMpLobbyBtn.style.display='inline-block';
+   }
   }else if(data.type==='alive'){
    mpRemote.alive=true;
   }else if(data.type==='sabotage'){
@@ -813,6 +822,16 @@ function receiveSabotage(kind){
  }
 }
 spectateBtn.onclick=startSpectating;
+returnMpLobbyBtn.onclick=()=>{
+ mpSpectating=false;spectatorHud.hidden=true;overlay.style.display='grid';
+ over.style.display='none';menu.style.display=garage.style.display=pauseMenu.style.display=achievementsPanel.style.display='none';multiplayerPanel.style.display='block';
+ mpUpdateModeUI(false);mpUpdateSabotageUI(false);
+ if(mpConnected){
+  mpSetStatus(mpRemote.alive?'Friend still driving · room connected':'Round over · room connected');
+  exitTwoPlayerBtn.style.display='inline-block';
+  startTwoPlayerBtn.style.display=(mpIsHost&&!mpRemote.alive)?'inline-block':'none';
+ }
+};
 document.querySelector('#stopSpectating').onclick=()=>stopSpectating(true);
 document.querySelectorAll('.sabotageGrid button').forEach(b=>b.onclick=()=>sendSabotage(b.dataset.sab,Number(b.dataset.cost)||0));
 function mpCreateInvite(){
@@ -877,7 +896,7 @@ mpModeBtn.onclick=()=>{mpMode=mpMode==='collision'?'ghost':'collision';mpUpdateM
 mpSabotageBtn.onclick=()=>{mpSabotageEnabled=!mpSabotageEnabled;mpUpdateSabotageUI();updateSabotageUI()};
 document.querySelector('#createInvite').onclick=mpCreateInvite;
 copyInviteBtn.onclick=async()=>{try{await navigator.clipboard.writeText(inviteLinkEl.value);mpSetStatus('Invite copied ✓')}catch{inviteLinkEl.select();mpSetStatus('Select the invite above and copy it.')}};
-startTwoPlayerBtn.onclick=()=>{if(!mpConnected)return;mpRemote.alive=true;mpConn.send({type:'start'});mpConn.send({type:'alive'});start();showRoute('2 PLAYER CHASE STARTED')};
+startTwoPlayerBtn.onclick=()=>{if(!mpConnected)return;mpRemote.alive=true;mpLocalAlive=true;mpConn.send({type:'start'});mpConn.send({type:'alive'});start(true);showRoute('2 PLAYER CHASE STARTED')};
 exitTwoPlayerBtn.onclick=()=>{
  if(mpConn&&mpConn.open){try{mpConn.send({type:'exit'})}catch{}}
  mpCleanup();
@@ -886,8 +905,19 @@ exitTwoPlayerBtn.onclick=()=>{
  menu.style.display='block';
  showRoute('LEFT 2 PLAYER');
 };
-function start(){mpSpectating=false;spectatorHud.hidden=true;spectateBtn.style.display='none';resetExpansion();playing=true;paused=false;localStorage.removeItem('neonGetawayRun');refreshContinue();overlay.style.display='none';menu.style.display='block';over.style.display='none';garage.style.display='none';pauseMenu.style.display=achievementsPanel.style.display=multiplayerPanel.style.display='none';hud.hidden=false;objects.length=particles.length=police.length=shells.length=enemyShells.length=0;score=time=road.scroll=0;update.spawnT=update.armySpawn=0;speed=430;sixStarActive=false;armyWaveStage=0;armorReady=selected===3;invincible=slideTimer=tankShield=tankCooldown=0;tankLives=10;lastWanted=1;empAt=4;route.mode='freeway';route.event='none';route.next=9;route.until=0;sizeRoad();locationEl.textContent='FREEWAY';clearNotices();player.w=selected===6?64:44;player.h=selected===6?92:78;player.x=W/2;player.y=H*.73;player.vx=player.vy=0;last=performance.now();saveGarage();record('chases');syncMobileControls();tone(440,.12);ensureLoop()}
-document.querySelector('#start').onclick=start;document.querySelector('#restart').onclick=start;document.querySelector('#mute').onclick=()=>{muted=!muted;document.querySelector('#mute').textContent=muted?'🔇':'🔊'};
+function start(forceMultiplayer=false){
+ if(mpConnected&&!forceMultiplayer){
+  showRoute('USE THE 2 PLAYER LOBBY TO START');
+  return;
+ }
+ mpLocalAlive=true;
+ const restartBtn=document.querySelector('#restart');
+ restartBtn.disabled=false;
+ restartBtn.textContent='RUN IT BACK';
+ restartBtn.style.display=mpConnected?'none':'inline-block';
+ returnMpLobbyBtn.style.display='none';
+ mpSpectating=false;spectatorHud.hidden=true;spectateBtn.style.display='none';resetExpansion();playing=true;paused=false;localStorage.removeItem('neonGetawayRun');refreshContinue();overlay.style.display='none';menu.style.display='block';over.style.display='none';garage.style.display='none';pauseMenu.style.display=achievementsPanel.style.display=multiplayerPanel.style.display='none';hud.hidden=false;objects.length=particles.length=police.length=shells.length=enemyShells.length=0;score=time=road.scroll=0;update.spawnT=update.armySpawn=0;speed=430;sixStarActive=false;armyWaveStage=0;armorReady=selected===3;invincible=slideTimer=tankShield=tankCooldown=0;tankLives=10;lastWanted=1;empAt=4;route.mode='freeway';route.event='none';route.next=9;route.until=0;sizeRoad();locationEl.textContent='FREEWAY';clearNotices();player.w=selected===6?64:44;player.h=selected===6?92:78;player.x=W/2;player.y=H*.73;player.vx=player.vy=0;last=performance.now();saveGarage();record('chases');syncMobileControls();tone(440,.12);ensureLoop()}
+document.querySelector('#start').onclick=()=>start(false);document.querySelector('#restart').onclick=()=>{if(mpConnected){showRoute('USE THE 2 PLAYER LOBBY TO START');return}start(false)};document.querySelector('#mute').onclick=()=>{muted=!muted;document.querySelector('#mute').textContent=muted?'🔇':'🔊'};
 function spawn(){if(route.mode==='tracks')return;const divider=route.mode==='street'&&(grassWarningAt>0||objects.some(o=>o.type==='grass'||o.type==='dirt')),lane=divider?(Math.random()<.5?0:2):Math.floor(Math.random()*road.lanes),type=Math.random();let o={x:road.x+road.lane*(lane+.5),y:-100,w:42,h:72,type:'traffic',color:['#ffb52e','#45e07b','#a468ff','#ef4774'][Math.floor(Math.random()*4)]};if(route.mode==='street'&&type<.11){o.type='manhole';o.w=o.h=48}else if(route.mode==='street'&&type<.23){o.type='oil';o.w=70;o.h=48}else if(type<.38){o.type='cash';o.w=o.h=32}else if(type<.52&&!divider){o.type='barrier';o.w=road.lane*.65;o.h=28;o.color='#ff7b22'}if(o.type==='traffic'&&boss&&boss.hp>0&&Math.random()<.05){o.type='truck';o.w=50;o.h=144;o.color='#78632d';o.powerCrate=true}else if(o.type==='traffic'&&Math.random()<.075){o.type='truck';o.w=50;o.h=144;o.color=['#7f8b96','#b55d3b','#486f9f','#8f7448'][Math.floor(Math.random()*4)]}if(o.type==='traffic'&&Math.random()<.001){o.daniel=true;o.color='#f2f2f2';record('danielEncounter')}objects.push(o)}
 const noticeEntries=[];
 function removeNotice(entry){
@@ -934,7 +964,20 @@ function hit(a,b,pad=5){return Math.abs(a.x-b.x)<(a.w+b.w)/2-pad&&Math.abs(a.y-b
 function burst(x,y,color='#ff6535',count=22){for(let i=0;i<count;i++)particles.push({x,y,vx:(Math.random()-.5)*450,vy:(Math.random()-.5)*450,life:.65+Math.random()*.45,color:i%2?color:'#ffe56c'})}
 function tankImpact(x,y){if(tankShield<=0){tankLives--;tankShield=3;if(tankLives>0)record('hitsSurvived');showRoute(`ARMY ARMOR HIT · ${tankLives} LIVES`)}else record('hitsSurvived');burst(x,y,'#ff9b35',34);shake=9;tone(65,.24,'square',.07);if(tankLives<=0)crash()}
 function instantCrash(){rhinoShields=0;armorReady=false;invincible=0;tankShield=0;tankLives=0;record('danielCrash');crash()}
-function crash(){if(!playing)return true;if(invincible>0)return false;if(powerShield>0){powerShield--;invincible=1.6;record('hitsSurvived');shake=12;burst(player.x,player.y,'#ffd43b',30);showRoute('POWER SHIELD SAVED YOU!');tone(520,.22,'sine',.06);return false}if(selected===3&&rhinoShields>0){rhinoShields--;armorReady=rhinoShields>0;invincible=1.6;record('hitsSurvived');shake=12;burst(player.x,player.y,'#50d8ff',30);showRoute('ARMOR SAVED YOU!');tone(150,.28,'square',.07);return false}record('totalScore',Math.floor(score));career.bestTime=Math.max(career.bestTime||0,time);localStorage.neonGetawayStats=JSON.stringify(career);checkAchievements();playing=false;if(mpConnected&&mpConn&&mpConn.open){try{mpConn.send({type:'dead'})}catch{}}syncMobileControls();localStorage.removeItem('neonGetawayRun');refreshContinue();shake=18;tone(75,.5,'sawtooth',.08);burst(player.x,player.y,'#ff6535',45);setTimeout(()=>{hud.hidden=true;overlay.style.display='grid';menu.style.display='none';garage.style.display='none';pauseMenu.style.display=achievementsPanel.style.display='none';over.style.display='block';spectateBtn.style.display=(mpConnected&&mpRemote.alive)?'inline-block':'none';finalEl.textContent=Math.floor(score).toLocaleString();let best=Math.max(+localStorage.neonGetawayBest||0,Math.floor(score));localStorage.neonGetawayBest=best;bestEl.textContent='BEST: '+best.toLocaleString();saveGarage()},450);return true}
+function crash(){if(!playing)return true;if(invincible>0)return false;if(powerShield>0){powerShield--;invincible=1.6;record('hitsSurvived');shake=12;burst(player.x,player.y,'#ffd43b',30);showRoute('POWER SHIELD SAVED YOU!');tone(520,.22,'sine',.06);return false}if(selected===3&&rhinoShields>0){rhinoShields--;armorReady=rhinoShields>0;invincible=1.6;record('hitsSurvived');shake=12;burst(player.x,player.y,'#50d8ff',30);showRoute('ARMOR SAVED YOU!');tone(150,.28,'square',.07);return false}record('totalScore',Math.floor(score));career.bestTime=Math.max(career.bestTime||0,time);localStorage.neonGetawayStats=JSON.stringify(career);checkAchievements();playing=false;mpLocalAlive=false;if(mpConnected&&mpConn&&mpConn.open){try{mpConn.send({type:'dead'})}catch{}}
+if(mpConnected){
+ const restartBtn=document.querySelector('#restart');
+ restartBtn.style.display='none';
+ restartBtn.disabled=true;
+ returnMpLobbyBtn.style.display='inline-block';
+}else{
+ const restartBtn=document.querySelector('#restart');
+ restartBtn.style.display='inline-block';
+ restartBtn.disabled=false;
+ restartBtn.textContent='RUN IT BACK';
+ returnMpLobbyBtn.style.display='none';
+}
+syncMobileControls();localStorage.removeItem('neonGetawayRun');refreshContinue();shake=18;tone(75,.5,'sawtooth',.08);burst(player.x,player.y,'#ff6535',45);setTimeout(()=>{hud.hidden=true;overlay.style.display='grid';menu.style.display='none';garage.style.display='none';pauseMenu.style.display=achievementsPanel.style.display='none';over.style.display='block';spectateBtn.style.display=(mpConnected&&mpRemote.alive)?'inline-block':'none';if(mpConnected){document.querySelector('#restart').style.display='none';returnMpLobbyBtn.style.display='inline-block'}else{document.querySelector('#restart').style.display='inline-block';returnMpLobbyBtn.style.display='none'}finalEl.textContent=Math.floor(score).toLocaleString();let best=Math.max(+localStorage.neonGetawayBest||0,Math.floor(score));localStorage.neonGetawayBest=best;bestEl.textContent='BEST: '+best.toLocaleString();saveGarage()},450);return true}
 function spawnCop(type='police',n=0){if(police.length>=MAX_POLICE)return;const monster=type==='monster',army=type==='army';police.push({x:road.x+road.lane*(n%road.lanes+.5),y:H+90+n*115,w:monster?72:army?64:type==='swat'?54:46,h:monster?112:army?92:type==='swat'?88:80,vx:0,type,shootAt:time+1+Math.random()})}
 function update(dt){if(escapeTime>=0){escapeTime+=dt;if(escapeTime>=8)finishEscape();return}time+=dt;if(Math.floor(time/5)!==update.statTick){update.statTick=Math.floor(time/5);career.bestTime=Math.max(career.bestTime||0,time);localStorage.neonGetawayStats=JSON.stringify(career);checkAchievements()}invincible=Math.max(0,invincible-dt);slideTimer=Math.max(0,slideTimer-dt);tankShield=Math.max(0,tankShield-dt);tankCooldown=Math.max(0,tankCooldown-dt);const tune=activeCar();const scoreRateMult=1+Math.floor(score/5000)*0.5;score+=dt*(10+speed/90)*scoreRateMult;speed=Math.min(780*tune.speed,(430+time*9)*tune.speed)*(selected===0&&boostLeft>0?1.4:1);road.scroll=(road.scroll+speed*dt)%90;
 if(route.event==='none'&&time>route.next){route.event=route.mode==='freeway'?'exit':route.mode==='street'?'junction':'entrance';route.until=time+9;showRoute(route.mode==='freeway'?'CITY ROAD →':route.mode==='street'?'← FREEWAY · TRAIN TRACKS →':'← CITY ROAD')}
