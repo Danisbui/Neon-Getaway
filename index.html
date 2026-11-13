@@ -90,7 +90,11 @@ const scoreEl=document.querySelector('#score'),moneyEl=document.querySelector('#
 let W,H,dpr,playing=false,paused=false,last=0,time=0,score=0,money=Number(localStorage.neonGetawayBossCash??500),speed=430,shake=0,muted=false,audio,armorReady=false,invincible=0,slideTimer=0,lastWanted=1,empAt=0,tankLives=10,tankShield=0,tankCooldown=0,sixStarActive=false,armyWaveStage=0,rafId=0;
 const MAX_POLICE=36,MAX_PARTICLES=360;
 let hardMode=false,hardSwatWaves=[],hardPoliceClock=0;
-let hardUnlocked=localStorage.neonGetawayHardUnlocked==='1';
+// Unlock Hard Mode for players who beat Normal before this update.
+const oldStats=(()=>{try{return JSON.parse(localStorage.neonGetawayBossStats||'{}')}catch{return {}}})();
+const oldAchievements=(()=>{try{return JSON.parse(localStorage.neonGetawayBossAchievements||'{}')}catch{return {}}})();
+let hardUnlocked=localStorage.neonGetawayHardUnlocked==='1'||Number(oldStats.bossWins||0)>0||!!oldAchievements.helicopterHunter;
+if(hardUnlocked)localStorage.neonGetawayHardUnlocked='1';
 function updateHardMenu(){const b=document.getElementById('hardStart'),l=document.getElementById('hardLocked');b.style.display=hardUnlocked?'inline-block':'none';l.style.display=hardUnlocked?'none':'block'}
 function awardCash(amount){const payout=Math.round(amount*(hardMode?3:1));money+=payout;return payout}
 function scheduleHardSwats(){hardSwatWaves=[time,time+10,time+20];showRoute('HARD MODE · SWAT WAVES: 4 + 4 + 4');}
